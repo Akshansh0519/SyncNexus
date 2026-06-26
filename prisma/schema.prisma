@@ -1,0 +1,96 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  username     String   @unique
+  passwordHash String
+  avatarUrl    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  memberships RoomMember[]
+  messages    Message[]
+  documents   Document[]
+}
+
+model Room {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  isPrivate Boolean  @default(false)
+  ownerId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members   RoomMember[]
+  messages  Message[]
+  documents Document[]
+
+  @@index([ownerId])
+}
+
+model RoomMember {
+  id       String   @id @default(uuid())
+  roomId   String
+  userId   String
+  role     String   @default("MEMBER")
+  joinedAt DateTime @default(now())
+
+  room Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Prevents duplicate memberships + doubles as the auth lookup index
+  @@unique([roomId, userId])
+  @@index([userId])
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  roomId    String
+  // Nullable + SetNull: AI/system messages have no author;
+  // deleting a user anonymizes their messages instead of removing them.
+  authorId  String?
+  type      String   @default("USER") // USER | AI | SYSTEM
+  content   String
+  // citations shape varies per AI answer; never queried by structure — JSON avoids a join table
+  citations Json?
+  createdAt DateTime @default(now())
+
+  room   Room  @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  author User? @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  // CRITICAL: this composite index powers cursor/keyset pagination.
+  // Without it, every "load older messages" request is a sequential scan.
+  // (See Complexity Card 4 in syncnexus_master_prompt.md)
+  @@index([roomId, createdAt, id])
+}
+
+model Document {
+  id           String   @id @default(uuid())
+  roomId       String
+  uploadedById String
+  filename     String
+  mimeType     String
+  sizeBytes    Int
+  storageKey   String   @unique
+  // PENDING → PROCESSING → READY | FAILED
+  status       String   @default("PENDING")
+  chunkCount   Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  room       Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  uploadedBy User @relation(fields: [uploadedById], references: [id], onDelete: Cascade)
+
+  @@index([roomId, status])
+}
