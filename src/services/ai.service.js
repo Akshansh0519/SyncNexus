@@ -52,14 +52,18 @@ function buildContext(chunks) {
 }
 
 async function callLlm(question, chunks) {
-  if (!geminiClient) {
+  const fallbackAnswer = () => {
     const strongest = chunks[0]?.text || ''
     return [
-      'AI mock answer:',
+      'AI mock answer (Document Synthesis):',
       strongest
-        ? `Based on the retrieved room documents, ${strongest.slice(0, 500)}`
-        : 'I could not find relevant indexed document context for that question.',
+        ? `Based on the retrieved room documents: "${strongest.slice(0, 500)}..."`
+        : 'I could not find relevant document context for that question.',
     ].join(' ')
+  }
+
+  if (!geminiClient) {
+    return fallbackAnswer()
   }
 
   const context = buildContext(chunks)
@@ -77,12 +81,13 @@ async function callLlm(question, chunks) {
         temperature: 0.2,
       },
     })
-    return response.text?.trim() || 'I could not generate an answer.'
+    return response.text?.trim() || fallbackAnswer()
   } catch (error) {
+    console.warn('Gemini LLM call failed, falling back to document synthesis:', error.message || error)
     if (error?.status === 429 || error?.message?.includes('quota')) {
-      return 'I am currently receiving too many requests (API quota exceeded). Please wait a moment and try again.'
+      return 'I am currently receiving too many requests (API quota exceeded). Here is what I found in the documents:\n\n' + fallbackAnswer()
     }
-    throw error
+    return fallbackAnswer()
   }
 }
 
