@@ -1,0 +1,62 @@
+.tab { display: flex; flex-direction: column; gap: var(--sp-4); }
+.list { display: flex; flex-direction: column; gap: var(--sp-3); }
+
+.doc {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-md);
+  transition: border-color var(--t-fast), box-shadow var(--t-fast);
+}
+.doc:hover {
+  border-color: var(--accent-border);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+.doc svg { color: var(--accent); }
+.docMeta { min-width: 0; }
+.docMeta p {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.docMeta span { color: var(--text-tertiary); font-size: 11px; font-family: var(--font-mono); }
+
+.download {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  color: var(--text-tertiary);
+  border-radius: var(--r-md);
+  transition: color var(--t-fast), background var(--t-fast);
+}
+.download:hover { color: var(--accent); background: var(--accent-muted); }
+
+.progress {
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--bg-elevated);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-glow-cyan);
+}
+.progress p {
+  margin-bottom: var(--sp-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+}
+.progress span { display: block; height: 4px; overflow: hidden; background: var(--bg-input); border-radius: 99px; }
+.progress i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--coral)); border-radius: inherit; transition: width var(--t-base); }
+
+.error { color: var(--error); font-size: 13px; background: var(--error-muted); padding: var(--sp-2) var(--sp-3); border-radius: var(--r-md); }
+.empty { color: var(--text-tertiary); font-size: 13px; text-align: center; padding: var(--sp-8) var(--sp-2); }

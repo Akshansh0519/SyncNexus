@@ -1,0 +1,28 @@
+.panel { display: flex; flex-direction: column; height: 100vh; min-width: 0; background: var(--bg-surface); border-left: 1px solid var(--border-subtle); }
+.tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-1);
+  padding: var(--sp-3);
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-base);
+}
+.tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  height: 36px;
+  color: var(--text-tertiary);
+  border-radius: var(--r-md);
+  font-size: 13px;
+  font-weight: 600;
+  transition: background var(--t-fast), color var(--t-fast), box-shadow var(--t-fast);
+}
+.tab:hover { color: var(--text-primary); background: var(--bg-elevated); }
+.tab.active {
+  color: var(--accent);
+  background: var(--accent-muted);
+  box-shadow: inset 0 0 0 1px var(--accent-border);
+}
+.body { flex: 1; min-height: 0; overflow-y: auto; padding: var(--sp-4); }
