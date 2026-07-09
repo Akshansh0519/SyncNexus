@@ -1,0 +1,176 @@
+.sidebar { height: 100vh; display: flex; flex-direction: column; background: var(--bg-surface); }
+
+/* ── Header / Logo ──────────────────────────────── */
+.header {
+  padding: var(--sp-5) var(--sp-4);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.logo {
+  font-family: var(--font-brand);
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+.logo span { color: var(--accent); }        /* "Nexus" in cyan */
+.logoDot  { color: var(--coral); }          /* "." in coral */
+
+/* WebSocket live status */
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: var(--sp-2);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+.statusDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--success);
+  animation: presencePulse 2s ease infinite;
+}
+.statusConnected { color: var(--success); }
+.statusConnecting { color: var(--warning); }
+.statusConnecting .statusDot { background: var(--warning); }
+
+/* ── Action buttons ─────────────────────────────── */
+.newRoomBtn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin: var(--sp-4) var(--sp-4);
+}
+
+/* ── Room List ──────────────────────────────────── */
+.roomList { flex: 1; overflow-y: auto; padding: var(--sp-2); }
+.empty {
+  padding: var(--sp-4);
+  color: var(--text-tertiary);
+  font-size: 12px;
+  text-align: center;
+  line-height: 1.6;
+}
+
+/* ── User Footer ────────────────────────────────── */
+.footer {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-base);
+}
+.userMeta { min-width: 0; flex: 1; }
+.userName {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.userEmail {
+  max-width: 110px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.onlineDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--success);
+  animation: presencePulse 2s ease infinite;
+  flex-shrink: 0;
+}
+.themeToggle,
+.logout {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  color: var(--text-tertiary);
+  border-radius: var(--r-md);
+  transition: color var(--t-fast), background var(--t-fast), transform var(--t-fast);
+}
+.themeToggle:hover {
+  color: var(--accent);
+  background: var(--accent-muted);
+  transform: rotate(15deg);
+}
+.logout:hover {
+  color: var(--error);
+  background: var(--error-muted);
+}
+
+/* ── Modal forms ────────────────────────────────── */
+.modalForm { display: flex; flex-direction: column; gap: var(--sp-4); }
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+}
+.checkbox input { accent-color: var(--coral); }
+.error {
+  color: var(--error);
+  font-size: 13px;
+  background: var(--error-muted);
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-md);
+}
+.publicRooms { display: flex; flex-direction: column; gap: var(--sp-3); }
+.publicRoom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-md);
+  transition: border-color var(--t-fast);
+}
+.publicRoom:hover { border-color: var(--accent-border); }
+.publicRoom div { min-width: 0; }
+.publicRoom p {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.publicRoom span { color: var(--text-tertiary); font-size: 11px; font-family: var(--font-mono); }
+.emptyPublic { color: var(--text-tertiary); font-size: 13px; text-align: center; padding: var(--sp-4); }
+
+@media (max-width: 720px) {
+  .sidebar {
+    height: auto;
+    max-height: 260px;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-3);
+    padding: var(--sp-3) var(--sp-4);
+  }
+  .status { margin-top: 0; }
+  .newRoomBtn {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    margin: var(--sp-3) var(--sp-4);
+  }
+  .roomList { flex: 0 1 auto; max-height: 100px; }
+  .footer { display: none; }
+}
