@@ -1,0 +1,37 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  background: rgba(7, 7, 15, 0.8);
+  backdrop-filter: blur(14px);
+}
+.modal {
+  width: min(420px, calc(100vw - 32px));
+  padding: var(--sp-5);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-lg);
+  animation: fadeSlideIn var(--t-base);
+}
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--sp-5);
+}
+.header h2 {
+  font-family: var(--font-brand);
+  font-size: 18px;
+}
+.close {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  color: var(--text-secondary);
+  border-radius: var(--r-md);
+}
+.close:hover { color: var(--text-primary); background: var(--bg-surface); }

@@ -1,0 +1,14 @@
+.spinner {
+  display: inline-block;
+  border: 2px solid var(--border-default);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spinRing 800ms linear infinite;
+}
+.fullPage {
+  display: grid;
+  place-items: center;
+  width: 100vw;
+  height: 100vh;
+  background: var(--bg-base);
+}

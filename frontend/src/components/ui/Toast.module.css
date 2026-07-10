@@ -1,0 +1,17 @@
+.toast {
+  position: fixed;
+  top: var(--sp-5);
+  right: var(--sp-5);
+  z-index: 60;
+  max-width: 340px;
+  padding: var(--sp-3) var(--sp-4);
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-md);
+  animation: toastIn var(--t-base);
+}
+.error { border-color: var(--error); color: var(--error); }
+.success { border-color: var(--success); color: var(--success); }
+.info { border-color: var(--accent-border); }
