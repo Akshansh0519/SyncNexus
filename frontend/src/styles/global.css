@@ -1,0 +1,41 @@
+@import './tokens.css';
+@import './animations.css';
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: 16px; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+body {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-primary);
+  background-color: var(--bg-base);
+  background-image:
+    radial-gradient(ellipse 80% 50% at 10% 0%,   rgba(0, 212, 255, 0.07)  0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 90% 100%,  rgba(255, 107, 53, 0.07) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 60% at 50% 50%,   rgba(168, 85, 247, 0.04) 0%, transparent 70%);
+  overflow: hidden;
+  transition: background-color var(--t-base), color var(--t-base);
+}
+
+[data-theme="light"] body {
+  background-image:
+    radial-gradient(ellipse 80% 50% at 10% 0%,   rgba(0, 140, 212, 0.08)  0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 90% 100%,  rgba(234, 88, 12, 0.06) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 60% at 50% 50%,   rgba(147, 51, 234, 0.04) 0%, transparent 70%);
+}
+
+/* ── Scrollbar ─────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-default); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
+
+/* ── Base elements ────────────────────────────── */
+a { color: var(--accent); text-decoration: none; transition: color var(--t-fast); }
+a:hover { color: var(--accent-hover); }
+button { font-family: var(--font-ui); cursor: pointer; border: 0; background: none; }
+input, textarea { font-family: var(--font-ui); }
+::selection { background: var(--accent-muted); color: var(--accent-hover); }
+:focus-visible { outline: none; box-shadow: var(--shadow-accent); border-radius: var(--r-md); }

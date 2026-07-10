@@ -1,0 +1,133 @@
+:root {
+  /* ── Surfaces ─────────────────────────────────── */
+  --bg-base:     #0d0f14;
+  --bg-surface:  #141720;
+  --bg-elevated: #1a1e2e;
+  --bg-input:    #10131c;
+  --bg-header-blur: rgba(13, 15, 20, 0.85);
+
+  /* ── Borders ──────────────────────────────────── */
+  --border-subtle:  #1e2235;
+  --border-default: #252b40;
+  --border-strong:  #3d4566;
+
+  /* ── Primary accent: Electric Cyan ───────────── */
+  --accent:        #00d4ff;
+  --accent-hover:  #33deff;
+  --accent-muted:  rgba(0, 212, 255, 0.08);
+  --accent-border: rgba(0, 212, 255, 0.22);
+
+  /* ── Action accent: Coral Orange ─────────────── */
+  --coral:        #ff6b35;
+  --coral-hover:  #ff8455;
+  --coral-muted:  rgba(255, 107, 53, 0.10);
+  --coral-border: rgba(255, 107, 53, 0.25);
+
+  /* ── AI gradient ──────────────────────────────── */
+  --ai-from: #00d4ff;
+  --ai-to:   #a855f7;
+
+  /* ── Semantic states ──────────────────────────── */
+  --success:       #00e5a0;
+  --success-muted: rgba(0, 229, 160, 0.10);
+  --warning:       #ffcc02;
+  --warning-muted: rgba(255, 204, 2, 0.10);
+  --error:         #ff4d6a;
+  --error-muted:   rgba(255, 77, 106, 0.10);
+
+  /* ── Text ─────────────────────────────────────── */
+  --text-primary:   #e8eaf6;
+  --text-secondary: #7b82a8;
+  --text-tertiary:  #454d6e;
+  --text-inverse:   #0d0f14;
+
+  /* ── Fonts ────────────────────────────────────── */
+  --font-brand: 'Plus Jakarta Sans', sans-serif;
+  --font-ui:    'Inter', sans-serif;
+  --font-mono:  'JetBrains Mono', monospace;
+
+  /* ── Spacing ──────────────────────────────────── */
+  --sp-1:  0.25rem;
+  --sp-2:  0.5rem;
+  --sp-3:  0.75rem;
+  --sp-4:  1rem;
+  --sp-5:  1.25rem;
+  --sp-6:  1.5rem;
+  --sp-8:  2rem;
+  --sp-10: 2.5rem;
+  --sp-12: 3rem;
+
+  /* ── Radii ────────────────────────────────────── */
+  --r-sm: 5px;
+  --r-md: 8px;
+  --r-lg: 12px;
+  --r-xl: 18px;
+
+  /* ── Shadows ──────────────────────────────────── */
+  --shadow-sm:    0 1px 3px rgba(0, 0, 0, 0.5);
+  --shadow-md:    0 4px 20px rgba(0, 0, 0, 0.6);
+  --shadow-lg:    0 8px 40px rgba(0, 0, 0, 0.7);
+  --shadow-accent: 0 0 0 2px rgba(0, 212, 255, 0.25);
+  --shadow-coral:  0 0 0 2px rgba(255, 107, 53, 0.25);
+  --shadow-glow-cyan:  0 0 20px rgba(0, 212, 255, 0.20);
+  --shadow-glow-coral: 0 0 20px rgba(255, 107, 53, 0.25);
+
+  /* ── Transitions ──────────────────────────────── */
+  --t-fast: 120ms ease;
+  --t-base: 200ms ease;
+  --t-slow: 350ms ease;
+}
+
+/* ── Light Mode Palette ─────────────────────────── */
+[data-theme="light"] {
+  /* Surfaces */
+  --bg-base:     #f8fafc;
+  --bg-surface:  #ffffff;
+  --bg-elevated: #f1f5f9;
+  --bg-input:    #ffffff;
+  --bg-header-blur: rgba(248, 250, 252, 0.85);
+
+  /* Borders */
+  --border-subtle:  #e2e8f0;
+  --border-default: #cbd5e1;
+  --border-strong:  #94a3b8;
+
+  /* Primary accent: Vivid Cyan for light backgrounds */
+  --accent:        #008cd4;
+  --accent-hover:  #0070ab;
+  --accent-muted:  rgba(0, 140, 212, 0.10);
+  --accent-border: rgba(0, 140, 212, 0.28);
+
+  /* Action accent: Coral Orange */
+  --coral:        #ea580c;
+  --coral-hover:  #c2410c;
+  --coral-muted:  rgba(234, 88, 12, 0.10);
+  --coral-border: rgba(234, 88, 12, 0.28);
+
+  /* AI gradient */
+  --ai-from: #008cd4;
+  --ai-to:   #9333ea;
+
+  /* Semantic states */
+  --success:       #059669;
+  --success-muted: rgba(5, 150, 105, 0.10);
+  --warning:       #d97706;
+  --warning-muted: rgba(217, 119, 6, 0.10);
+  --error:         #dc2626;
+  --error-muted:   rgba(220, 38, 38, 0.10);
+
+  /* Text */
+  --text-primary:   #0f172a;
+  --text-secondary: #475569;
+  --text-tertiary:  #94a3b8;
+  --text-inverse:   #ffffff;
+
+  /* Shadows */
+  --shadow-sm:    0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-md:    0 4px 16px rgba(0, 0, 0, 0.08);
+  --shadow-lg:    0 8px 30px rgba(0, 0, 0, 0.10);
+  --shadow-accent: 0 0 0 2px rgba(0, 140, 212, 0.25);
+  --shadow-coral:  0 0 0 2px rgba(234, 88, 12, 0.25);
+  --shadow-glow-cyan:  0 0 20px rgba(0, 140, 212, 0.15);
+  --shadow-glow-coral: 0 0 20px rgba(234, 88, 12, 0.18);
+}
