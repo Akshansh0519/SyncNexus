@@ -4,6 +4,9 @@ jest.mock('../src/lib/s3', () => ({
   generateUploadUrl: jest.fn(async (_bucket, key) => `http://minio.local/upload/${encodeURIComponent(key)}`),
   generateDownloadUrl: jest.fn(async (_bucket, key) => `http://minio.local/download/${encodeURIComponent(key)}`),
   ensureBucket: jest.fn(async () => undefined),
+  getBucket: jest.fn(() => 'syncnexus-files'),
+  putObject: jest.fn(async () => undefined),
+  getObjectBuffer: jest.fn(async () => Buffer.from('mock content')),
   s3: {},
 }))
 
@@ -15,6 +18,7 @@ const request = require('supertest')
 const createApp = require('../src/app')
 const prisma = require('../src/lib/prisma')
 const { redis } = require('../src/lib/redis')
+const { documentQueue, documentQueueConnection, documentQueueEvents } = require('../src/queues/documentQueue')
 
 let app
 let accessToken
@@ -29,11 +33,15 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
+  await documentQueue.close()
+  await documentQueueEvents.close()
+  documentQueueConnection.disconnect()
   await prisma.$disconnect()
   redis.disconnect()
 })
 
 beforeEach(async () => {
+  await documentQueue.drain(true)
   await prisma.document.deleteMany()
   await prisma.roomMember.deleteMany()
   await prisma.room.deleteMany()
@@ -140,6 +148,21 @@ describe('Phase 5 file sharing routes', () => {
 
     expect(res.status).toBe(201)
     expect(res.body.status).toBe('READY')
+  })
+
+  it('uploads a file directly via POST /files/upload', async () => {
+    const res = await request(app)
+      .post(`/api/rooms/${roomId}/files/upload`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .attach('file', Buffer.from('hello world direct upload'), 'direct.txt')
+
+    expect(res.status).toBe(201)
+    expect(res.body).toMatchObject({
+      roomId,
+      filename: 'direct.txt',
+      mimeType: 'text/plain',
+      status: 'PENDING',
+    })
   })
 
   it('returns a presigned download URL for a room document', async () => {

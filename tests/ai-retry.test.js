@@ -30,6 +30,7 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
+  await aiQueue.obliterate({ force: true }).catch(() => {})
   await aiQueue.close()
   await aiQueueEvents.close()
   aiQueueConnection.disconnect()
@@ -69,16 +70,31 @@ describe('Phase 7 AI retry and failure behavior', () => {
       question: 'This question will always fail',
     })
 
-    // Wait for the job to fail after all retries
+    // Wait for the job to permanently fail after all 3 attempts
     const failedPromise = new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => reject(new Error('Job did not fail within timeout')), 30000)
+      let onFailed
 
-      aiQueueEvents.on('failed', ({ jobId, failedReason }) => {
+      const timeout = setTimeout(() => {
+        if (onFailed) aiQueueEvents.off('failed', onFailed)
+        reject(new Error('Job did not fail within timeout'))
+      }, 30000)
+
+      onFailed = async ({ jobId, failedReason }) => {
         if (jobId === job.id) {
-          clearTimeout(timeout)
-          resolve({ jobId, failedReason })
+          try {
+            const checkJob = await aiQueue.getJob(job.id)
+            if (checkJob && checkJob.attemptsMade >= 3) {
+              clearTimeout(timeout)
+              aiQueueEvents.off('failed', onFailed)
+              resolve({ jobId, failedReason })
+            }
+          } catch {
+            // Ignore error when checking job
+          }
         }
-      })
+      }
+
+      aiQueueEvents.on('failed', onFailed)
     })
 
     const failResult = await failedPromise
