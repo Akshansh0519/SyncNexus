@@ -55,9 +55,13 @@ async function main() {
 
   // ── Ensure MinIO bucket exists (once, not per-request) ────────────────
   if (process.env.MINIO_BUCKET) {
-    const { ensureBucket } = require('./lib/s3')
-    await ensureBucket(process.env.MINIO_BUCKET)
-    logger.info({ bucket: process.env.MINIO_BUCKET }, 'MinIO bucket verified')
+    try {
+      const { ensureBucket } = require('./lib/s3')
+      await ensureBucket(process.env.MINIO_BUCKET)
+      logger.info({ bucket: process.env.MINIO_BUCKET }, 'MinIO bucket verified')
+    } catch (s3Error) {
+      logger.warn({ err: s3Error.message }, 'MinIO bucket verification failed — file uploads disabled until S3 credentials are valid')
+    }
   }
 
   // ── Create HTTP server ───────────────────────────────────────────────────
