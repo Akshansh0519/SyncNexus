@@ -1,6 +1,6 @@
 import { Download, File, FileImage, FileText, Upload } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import { confirmUploadRequest, getDownloadUrlRequest, listDocumentsRequest, presignUploadRequest, uploadToPresignedUrl } from '../../api/files.api.js'
+import { getDownloadUrlRequest, listDocumentsRequest, uploadFileRequest } from '../../api/files.api.js'
 import { useSocket } from '../../contexts/SocketContext.jsx'
 import Badge from '../ui/Badge.jsx'
 import Button from '../ui/Button.jsx'
@@ -66,11 +66,9 @@ export default function DocumentsTab({ roomId }) {
     setError('')
     setProgress({ name: file.name, value: 0 })
     try {
-      const upload = await presignUploadRequest(roomId, file)
-      await uploadToPresignedUrl(upload.uploadUrl, file, (event) => {
-        setProgress({ name: file.name, value: Math.round((event.loaded / event.total) * 100) })
+      const document = await uploadFileRequest(roomId, file, (percent) => {
+        setProgress({ name: file.name, value: percent })
       })
-      const document = await confirmUploadRequest(roomId, upload, file)
       setDocuments((current) => [document, ...current])
     } catch (err) {
       const serverMsg = err.response?.data?.message || err.response?.data?.error

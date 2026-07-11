@@ -30,6 +30,7 @@
     "jsonwebtoken": "^9.0.2",
     "mammoth": "^1.8.0",
     "morgan": "^1.10.0",
+    "multer": "^2.2.0",
     "pdf-parse": "^1.1.1",
     "pino": "^9.3.1",
     "pino-pretty": "^11.2.1",

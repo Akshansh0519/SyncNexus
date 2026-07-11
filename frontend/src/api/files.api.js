@@ -1,4 +1,3 @@
-import axios from 'axios'
 import api from './axios.js'
 
 export async function listDocumentsRequest(roomId) {
@@ -6,31 +5,21 @@ export async function listDocumentsRequest(roomId) {
   return data
 }
 
-export async function presignUploadRequest(roomId, file) {
-  const { data } = await api.post(`/api/rooms/${roomId}/files/presign`, {
-    filename: file.name,
-    mimeType: file.type,
-    sizeBytes: file.size,
-  })
-  return data
-}
+/**
+ * Upload a file via the backend (server proxies to S3, no browser CORS needed).
+ * onProgress(percent: number) is called with 0-100 as the upload proceeds.
+ */
+export async function uploadFileRequest(roomId, file, onProgress) {
+  const formData = new FormData()
+  formData.append('file', file)
 
-export async function uploadToPresignedUrl(uploadUrl, file, onUploadProgress) {
-  await axios.put(uploadUrl, file, {
-    headers: {
-      'Content-Type': file.type,
-      'Content-Length': file.size,
+  const { data } = await api.post(`/api/rooms/${roomId}/files/upload`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    onUploadProgress: (event) => {
+      if (onProgress && event.total) {
+        onProgress(Math.round((event.loaded / event.total) * 100))
+      }
     },
-    onUploadProgress,
-  })
-}
-
-export async function confirmUploadRequest(roomId, upload, file) {
-  const { data } = await api.post(`/api/rooms/${roomId}/files/confirm`, {
-    storageKey: upload.storageKey,
-    filename: file.name,
-    mimeType: file.type,
-    sizeBytes: file.size,
   })
   return data
 }

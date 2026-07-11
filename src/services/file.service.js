@@ -6,7 +6,7 @@ const { redis } = require('../lib/redis')
 const emitter = require('../lib/emitter')
 const { AppError } = require('../lib/errors')
 const { ALLOWED_MIME_TYPES } = require('../validators')
-const { generateDownloadUrl, generateUploadUrl } = require('../lib/s3')
+const { generateDownloadUrl, putObject } = require('../lib/s3')
 const { documentQueue } = require('../queues/documentQueue')
 
 const DOCUMENT_MIME_TYPES = new Set([
@@ -57,21 +57,57 @@ function assertRoomStorageKey(roomId, storageKey) {
   }
 }
 
-async function presignUpload(roomId, _userId, { filename, mimeType, sizeBytes }) {
+async function presignUpload(roomId, _userId, { filename, mimeType, sizeBytes: _sizeBytes }) {
   assertAllowedMimeType(mimeType)
 
   const safeFilename = sanitizeFilename(filename)
   const storageKey = `rooms/${roomId}/${crypto.randomUUID()}-${safeFilename}`
-  const uploadUrl = await generateUploadUrl(getBucket(), storageKey, mimeType, sizeBytes)
 
   // Track intent in Redis for 5 minutes
   await redis.set(`presign:${storageKey}`, '1', 'EX', 300)
 
   return {
-    uploadUrl,
     storageKey,
     expiresIn: 300,
   }
+}
+
+async function uploadFileDirect(roomId, userId, buffer, { filename, mimeType, sizeBytes }) {
+  assertAllowedMimeType(mimeType)
+
+  const safeFilename = sanitizeFilename(filename)
+  const storageKey = `rooms/${roomId}/${crypto.randomUUID()}-${safeFilename}`
+
+  // Upload directly server-side (bypasses browser CORS with cloud S3 providers)
+  await putObject(getBucket(), storageKey, buffer, mimeType)
+
+  const status = DOCUMENT_MIME_TYPES.has(mimeType) ? 'PENDING' : 'READY'
+
+  const document = await prisma.document.create({
+    data: {
+      roomId,
+      uploadedById: userId,
+      filename: safeFilename,
+      mimeType,
+      sizeBytes,
+      storageKey,
+      status,
+    },
+  })
+
+  const response = formatDocument(document)
+
+  if (status === 'PENDING') {
+    await documentQueue.add('ingest-document', {
+      roomId,
+      documentId: document.id,
+      userId,
+    })
+  }
+
+  emitter.to(roomId).emit('file:shared', { document: response })
+
+  return response
 }
 
 async function confirmUpload(roomId, userId, { storageKey, filename, mimeType, sizeBytes }) {
@@ -147,4 +183,5 @@ module.exports = {
   getDocuments,
   getDownloadUrl,
   formatDocument,
+  uploadFileDirect,
 }

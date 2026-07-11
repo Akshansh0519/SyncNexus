@@ -72,10 +72,18 @@ async function main() {
   const { setupSocket } = require('./socket')
   setupSocket(httpServer)
 
-  // ── NOTE: Background Workers run in a SEPARATE process (src/worker.js) ────
-  // Do NOT require workers here — that would cause double job processing
-  // when both the 'app' and 'worker' docker-compose services are running.
-  // Worker process is started by: `npm run worker` / docker-compose worker service.
+  // ── Start background workers inline for single-server/free tier deployments ──
+  // If START_WORKERS !== 'false', automatically start document ingestion and AI answer workers
+  // so everything works seamlessly without requiring a separate background worker service.
+  let ingestWorker = null
+  let aiWorker = null
+  if (process.env.START_WORKERS !== 'false') {
+    const { ingestDocumentWorker } = require('./queues/workers/ingestDocument.worker')
+    const { aiAnswerWorker } = require('./queues/workers/aiAnswer.worker')
+    ingestWorker = ingestDocumentWorker
+    aiWorker = aiAnswerWorker
+    logger.info('Background workers (ingestDocument, aiAnswer) started inline with web service')
+  }
 
   // ── Start listening ──────────────────────────────────────────────────────
   httpServer.listen(PORT, () => {
@@ -85,6 +93,8 @@ async function main() {
   // ── Graceful shutdown ────────────────────────────────────────────────────
   const shutdown = async (signal) => {
     logger.info({ signal }, 'Shutdown signal received')
+    if (ingestWorker) await ingestWorker.close()
+    if (aiWorker) await aiWorker.close()
     httpServer.close(async () => {
       await prisma.$disconnect()
       redis.disconnect()

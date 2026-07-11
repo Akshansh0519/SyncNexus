@@ -108,10 +108,21 @@ async function getObjectBuffer(bucket, key) {
   return Buffer.concat(chunks)
 }
 
+async function putObject(bucket, key, buffer, contentType) {
+  await s3.send(new PutObjectCommand({
+    Bucket: bucket,
+    Key: key,
+    Body: buffer,
+    ContentType: contentType,
+    ContentLength: buffer.length,
+  }))
+}
+
 module.exports = {
   s3,
   ensureBucket,
   generateUploadUrl,
   generateDownloadUrl,
   getObjectBuffer,
+  putObject,
 }
