@@ -1,0 +1,13 @@
+# Exclude from Docker build context — keeps images small and secret-free
+node_modules
+frontend/node_modules
+frontend/dist
+.env
+*.log
+.git
+.github
+docs
+tests
+syncnexus_master_prompt.md
+coverage
+.eslintrc.json

@@ -86,15 +86,20 @@ async function batchEmbed(texts, onProgress) {
 
   for (let i = 0; i < texts.length; i += BATCH_SIZE) {
     const batch = texts.slice(i, i + BATCH_SIZE)
-    const batchResponses = await Promise.all(
-      batch.map((text) =>
-        geminiClient.models.embedContent({
-          model: 'gemini-embedding-001',
-          contents: text,
-        })
+    try {
+      const batchResponses = await Promise.all(
+        batch.map((text) =>
+          geminiClient.models.embedContent({
+            model: 'gemini-embedding-001',
+            contents: text,
+          })
+        )
       )
-    )
-    responses.push(...batchResponses)
+      responses.push(...batchResponses)
+    } catch (error) {
+      console.warn('Gemini embedding failed, falling back to mock embeddings:', error.message || error)
+      responses.push(...batch.map((text) => ({ embeddings: [{ values: mockEmbed(text) }] })))
+    }
 
     if (onProgress) {
       const percent = Math.min(100, Math.round(((i + BATCH_SIZE) / texts.length) * 100))

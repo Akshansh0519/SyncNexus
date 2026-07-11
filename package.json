@@ -49,7 +49,7 @@
     "testEnvironment": "node",
     "testTimeout": 30000,
     "testEnvironmentOptions": {},
-    "globalSetup": null,
+    "globalSetup": "<rootDir>/tests/global-setup.js",
     "setupFiles": [
       "<rootDir>/tests/setup.js"
     ]

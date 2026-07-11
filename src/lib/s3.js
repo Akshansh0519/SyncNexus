@@ -19,6 +19,16 @@ const s3 = new S3Client({
   },
 })
 
+const s3Public = new S3Client({
+  endpoint: process.env.MINIO_PUBLIC_ENDPOINT || 'http://localhost:9005',
+  forcePathStyle: true,
+  region: process.env.MINIO_REGION || 'us-east-1',
+  credentials: {
+    accessKeyId: process.env.MINIO_ACCESS_KEY,
+    secretAccessKey: process.env.MINIO_SECRET_KEY,
+  },
+})
+
 async function ensureBucket(bucket) {
   try {
     await s3.send(new HeadBucketCommand({ Bucket: bucket }))
@@ -37,7 +47,7 @@ async function generateUploadUrl(bucket, key, contentType, contentLength) {
     ContentLength: contentLength,
   })
 
-  return getSignedUrl(s3, command, { expiresIn: 300 })
+  return await getSignedUrl(s3Public, command, { expiresIn: 300 })
 }
 
 async function generateDownloadUrl(bucket, key) {
@@ -46,7 +56,7 @@ async function generateDownloadUrl(bucket, key) {
     Key: key,
   })
 
-  return getSignedUrl(s3, command, { expiresIn: 3600 })
+  return await getSignedUrl(s3Public, command, { expiresIn: 3600 })
 }
 
 async function getObjectBuffer(bucket, key) {
