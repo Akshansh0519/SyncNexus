@@ -16,10 +16,10 @@ const DOCUMENT_MIME_TYPES = new Set([
 ])
 
 function getBucket() {
-  if (!process.env.MINIO_BUCKET) {
+  if (!process.env.MINIO_BUCKET || !process.env.MINIO_BUCKET.trim()) {
     throw new AppError('MINIO_BUCKET is not configured', 500, 'MINIO_BUCKET_MISSING')
   }
-  return process.env.MINIO_BUCKET
+  return process.env.MINIO_BUCKET.trim()
 }
 
 function sanitizeFilename(filename) {

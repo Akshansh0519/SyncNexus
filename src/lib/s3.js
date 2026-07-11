@@ -11,6 +11,7 @@ const { getSignedUrl } = require('@aws-sdk/s3-request-presigner')
 
 function normalizeEndpoint(url) {
   if (!url) return 'http://localhost:9005'
+  url = url.trim()
   if (!url.startsWith('http://') && !url.startsWith('https://')) {
     return `https://${url}`
   }
@@ -34,22 +35,45 @@ const forcePathStyle = process.env.MINIO_FORCE_PATH_STYLE !== undefined
 const s3 = new S3Client({
   endpoint: endpointUrl,
   forcePathStyle,
-  region: process.env.MINIO_REGION || 'us-east-1',
+  region: (process.env.MINIO_REGION || 'us-east-1').trim(),
   credentials: {
-    accessKeyId: process.env.MINIO_ACCESS_KEY,
-    secretAccessKey: process.env.MINIO_SECRET_KEY,
+    accessKeyId: (process.env.MINIO_ACCESS_KEY || '').trim(),
+    secretAccessKey: (process.env.MINIO_SECRET_KEY || '').trim(),
   },
 })
 
 const s3Public = new S3Client({
   endpoint: normalizeEndpoint(process.env.MINIO_PUBLIC_ENDPOINT || endpointUrl),
   forcePathStyle,
-  region: process.env.MINIO_REGION || 'us-east-1',
+  region: (process.env.MINIO_REGION || 'us-east-1').trim(),
   credentials: {
-    accessKeyId: process.env.MINIO_ACCESS_KEY,
-    secretAccessKey: process.env.MINIO_SECRET_KEY,
+    accessKeyId: (process.env.MINIO_ACCESS_KEY || '').trim(),
+    secretAccessKey: (process.env.MINIO_SECRET_KEY || '').trim(),
   },
 })
+
+function logS3Diagnostics(err, operation, bucket) {
+  const logger = require('./logger')
+  const accessKey = (process.env.MINIO_ACCESS_KEY || '').trim()
+  const secretKey = (process.env.MINIO_SECRET_KEY || '').trim()
+  const maskedAccess = accessKey.length > 4
+    ? `${accessKey.substring(0, 4)}*** (len:${accessKey.length})`
+    : `(len:${accessKey.length})`
+  const maskedSecret = `*** (len:${secretKey.length})`
+
+  logger.error({
+    operation,
+    errName: err?.name,
+    errCode: err?.code || err?.$metadata?.httpStatusCode,
+    errMessage: err?.message,
+    endpointUrl,
+    bucket,
+    region: (process.env.MINIO_REGION || 'us-east-1').trim(),
+    forcePathStyle,
+    accessKey: maskedAccess,
+    secretKey: maskedSecret,
+  }, `S3 Storage Diagnostic Info — ${operation} Failed`)
+}
 
 async function ensureBucket(bucket) {
   try {
@@ -71,11 +95,13 @@ async function ensureBucket(bucket) {
           createErr.name !== 'BucketAlreadyOwnedByYou' &&
           !(createErr.message && createErr.message.toLowerCase().includes('already exists'))
         ) {
+          logS3Diagnostics(createErr, 'ensureBucket(CreateBucket)', bucket)
           if (isCloudEndpoint) return
           throw createErr
         }
       }
     } else {
+      logS3Diagnostics(err, 'ensureBucket(HeadBucket)', bucket)
       if (isCloudEndpoint) return
       throw err
     }
@@ -116,9 +142,10 @@ async function getObjectBuffer(bucket, key) {
 
     return Buffer.concat(chunks)
   } catch (err) {
+    logS3Diagnostics(err, 'getObjectBuffer', bucket)
     const { AppError } = require('./errors')
     throw new AppError(
-      `S3 Storage Error (${err.name || 'GetObject'}): ${err.message || 'Failed to read file from cloud storage'}.`,
+      `S3 Storage Error (${err.name || 'GetObject'}): ${err.message || 'Failed to read file from cloud storage'}. Endpoint=${endpointUrl}, Bucket=${bucket}.`,
       502,
       'S3_DOWNLOAD_ERROR'
     )
@@ -156,9 +183,12 @@ async function putObject(bucket, key, buffer, contentType) {
       }
     }
 
+    logS3Diagnostics(err, 'putObject', bucket)
+    const accessKey = (process.env.MINIO_ACCESS_KEY || '').trim()
+    const maskedAccess = accessKey.length > 4 ? `${accessKey.substring(0, 4)}***(len:${accessKey.length})` : `len:${accessKey.length}`
     const { AppError } = require('./errors')
     throw new AppError(
-      `S3 Storage Error (${err.name || 'PutObject'}): ${err.message || 'Failed to upload file to cloud storage'}. Verify MINIO_BUCKET (${bucket}) and storage credentials.`,
+      `S3 Storage Error (${err.name || 'PutObject'} - ${err.message || 'Unknown'}): Endpoint=${endpointUrl}, Bucket=${bucket}, AccessKey=${maskedAccess}, forcePathStyle=${forcePathStyle}. Verify your MINIO credentials on Render.`,
       502,
       'S3_UPLOAD_ERROR'
     )
