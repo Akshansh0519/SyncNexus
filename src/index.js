@@ -90,9 +90,39 @@ async function main() {
     logger.info({ port: PORT, env: process.env.NODE_ENV }, 'SyncNexus API server started')
   })
 
+  // ── Self-Ping Cron (Keep-Alive for Render Free Tier) ──────────────────────
+  // Pings both the backend health endpoint and ChromaDB heartbeat every 5 minutes (300,000 ms)
+  // so neither container hibernates (`<!DOCTYPE html` loading screens) and is 24/7 fast for recruiters!
+  const keepAliveInterval = setInterval(() => {
+    // Skip self-ping during local development unless explicitly requested
+    if (process.env.NODE_ENV !== 'production' && !process.env.KEEP_ALIVE_URL) return
+
+    const urlsToPing = [
+      process.env.KEEP_ALIVE_URL || (process.env.RENDER_EXTERNAL_URL ? `${process.env.RENDER_EXTERNAL_URL}/api/health` : 'https://syncnexus-backend.onrender.com/api/health')
+    ]
+    if (process.env.CHROMA_URL) {
+      urlsToPing.push(`${process.env.CHROMA_URL.replace(/\/+$/, '')}/api/v1/heartbeat`)
+    }
+
+    for (const targetUrl of urlsToPing) {
+      const protocol = targetUrl.startsWith('https') ? require('https') : require('http')
+      protocol.get(targetUrl, (res) => {
+        if (res.statusCode === 200) {
+          logger.info({ url: targetUrl, status: res.statusCode }, 'Keep-alive cron ping successful')
+        } else {
+          logger.warn({ url: targetUrl, status: res.statusCode }, 'Keep-alive cron ping returned non-200 status')
+        }
+      }).on('error', (err) => {
+        logger.warn({ err: err.message, url: targetUrl }, 'Keep-alive cron ping failed')
+      })
+    }
+  }, 5 * 60 * 1000)
+  keepAliveInterval.unref()
+
   // ── Graceful shutdown ────────────────────────────────────────────────────
   const shutdown = async (signal) => {
     logger.info({ signal }, 'Shutdown signal received')
+    clearInterval(keepAliveInterval)
     if (ingestWorker) await ingestWorker.close()
     if (aiWorker) await aiWorker.close()
     httpServer.close(async () => {
