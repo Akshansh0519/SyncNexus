@@ -2,6 +2,7 @@
 
 const prisma = require('../lib/prisma')
 const { geminiClient } = require('../lib/gemini')
+const logger = require('../lib/logger')
 const { retrieveChunks } = require('./rag.service')
 const { formatMessage } = require('./message.service')
 
@@ -83,7 +84,7 @@ async function callLlm(question, chunks) {
     })
     return response.text?.trim() || fallbackAnswer()
   } catch (error) {
-    console.warn('Gemini LLM call failed, falling back to document synthesis:', error.message || error)
+    logger.warn({ err: error }, `Gemini LLM call failed, falling back to document synthesis: ${error.message || error}`)
     if (error?.status === 429 || error?.message?.includes('quota')) {
       return 'I am currently receiving too many requests (API quota exceeded). Here is what I found in the documents:\n\n' + fallbackAnswer()
     }

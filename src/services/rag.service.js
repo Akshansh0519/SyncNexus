@@ -5,6 +5,7 @@ const mammoth = require('mammoth')
 const pdfParse = require('pdf-parse')
 const { geminiClient } = require('../lib/gemini')
 const { getCollection } = require('../lib/chroma')
+const logger = require('../lib/logger')
 
 const EMBEDDING_DIMENSIONS = 3072
 
@@ -97,7 +98,7 @@ async function batchEmbed(texts, onProgress) {
       )
       responses.push(...batchResponses)
     } catch (error) {
-      console.warn('Gemini embedding failed, falling back to mock embeddings:', error.message || error)
+      logger.warn({ err: error }, `Gemini embedding failed, falling back to mock embeddings: ${error.message || error}`)
       responses.push(...batch.map((text) => ({ embeddings: [{ values: mockEmbed(text) }] })))
     }
 
