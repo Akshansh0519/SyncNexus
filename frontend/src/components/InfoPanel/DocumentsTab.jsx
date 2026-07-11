@@ -34,8 +34,11 @@ export default function DocumentsTab({ roomId }) {
     if (!socket || !roomId) return undefined
 
     const handleShared = ({ document }) => {
-      if (document.roomId === roomId) {
-        setDocuments((current) => [document, ...current.filter((item) => item.id !== document.id)])
+      if (document && document.roomId === roomId) {
+        setDocuments((current) => [
+          document,
+          ...current.filter((item) => item.id !== document.id && item.filename !== document.filename && item.storageKey !== document.storageKey),
+        ])
       }
     }
     const handleProgress = ({ documentId, percent }) => {
@@ -46,7 +49,13 @@ export default function DocumentsTab({ roomId }) {
     }
     const handleReady = ({ document }) => {
       if (!document || document.roomId !== roomId) return
-      setDocuments((current) => current.map((doc) => doc.id === document.id ? { ...document, progressPercent: null } : doc))
+      setDocuments((current) => {
+        const exists = current.some((doc) => doc.id === document.id || doc.filename === document.filename)
+        if (exists) {
+          return current.map((doc) => (doc.id === document.id || doc.filename === document.filename) ? { ...doc, ...document, progressPercent: null } : doc)
+        }
+        return [document, ...current]
+      })
     }
 
     socket.on('file:shared', handleShared)
@@ -69,7 +78,10 @@ export default function DocumentsTab({ roomId }) {
       const document = await uploadFileRequest(roomId, file, (percent) => {
         setProgress({ name: file.name, value: percent })
       })
-      setDocuments((current) => [document, ...current])
+      setDocuments((current) => [
+        document,
+        ...current.filter((item) => item.id !== document.id && item.filename !== document.filename && item.storageKey !== document.storageKey),
+      ])
     } catch (err) {
       const serverMsg = err.response?.data?.message || err.response?.data?.error
       const networkMsg = !err.response ? `Network error — cannot reach server (${err.message})` : null

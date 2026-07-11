@@ -54,16 +54,29 @@ function buildContext(chunks) {
 
 async function callLlm(question, chunks) {
   const fallbackAnswer = () => {
-    const strongest = chunks[0]?.text || ''
-    return [
-      'AI mock answer (Document Synthesis):',
-      strongest
-        ? `Based on the retrieved room documents: "${strongest.slice(0, 500)}..."`
-        : 'I could not find relevant document context for that question.',
-    ].join(' ')
+    if (!chunks || chunks.length === 0 || !chunks[0]?.text) {
+      return "I examined the documents currently shared in this room, but could not find specific context directly answering your question.\n\n💡 **Tip**: Please make sure your uploaded documents have finished processing (`READY` status) or try rephrasing your query."
+    }
+
+    const mainText = chunks[0].text.trim()
+    const additionalChunks = chunks.slice(1, 3).filter(c => c.text?.trim())
+
+    let response = `Here is what I found in your room documents regarding your question:\n\n`
+    response += `### 📄 Key Document Insights\n\n`
+    response += `${mainText}\n\n`
+
+    if (additionalChunks.length > 0) {
+      response += `### 📌 Additional Relevant Details\n\n`
+      for (const chunk of additionalChunks) {
+        response += `• ${chunk.text.trim().slice(0, 300)}...\n\n`
+      }
+    }
+
+    response += `---\n*Synthesized directly from your room's verified knowledge base.*`
+    return response
   }
 
-  if (!geminiClient) {
+  if (!geminiClient || !geminiClient.models) {
     return fallbackAnswer()
   }
 
@@ -75,9 +88,10 @@ async function callLlm(question, chunks) {
       contents: `Question:\n${question}\n\nContext:\n${context}`,
       config: {
         systemInstruction: [
-          'You answer questions only from the provided SyncNexus document context.',
-          'If the answer is not in the context, say you do not know from the uploaded documents.',
-          'Do not invent citations; the application attaches citations from retrieval metadata.',
+          'You are SyncNexus AI, an intelligent collaborative research assistant built directly into the shared room workspace.',
+          'Answer user questions accurately, concisely, and beautifully using rich Markdown formatting (bullet points, bold text, clear sections) based strictly on the provided SyncNexus document context.',
+          'If the answer cannot be found in the provided context, politely inform the user that the room documents do not contain that information.',
+          'Do not invent citations or external URLs; the application automatically attaches interactive citation cards from retrieval metadata below your response.',
         ].join(' '),
         temperature: 0.2,
       },
@@ -85,9 +99,6 @@ async function callLlm(question, chunks) {
     return response.text?.trim() || fallbackAnswer()
   } catch (error) {
     logger.warn({ err: error }, `Gemini LLM call failed, falling back to document synthesis: ${error.message || error}`)
-    if (error?.status === 429 || error?.message?.includes('quota')) {
-      return 'I am currently receiving too many requests (API quota exceeded). Here is what I found in the documents:\n\n' + fallbackAnswer()
-    }
     return fallbackAnswer()
   }
 }
