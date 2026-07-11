@@ -64,22 +64,6 @@ jobs:
         ports:
           - 8000:8000
 
-      minio:
-        image: minio/minio:RELEASE.2024-06-13T22-53-53Z
-        ports:
-          - 9000:9000
-        env:
-          MINIO_ROOT_USER: minioadmin
-          MINIO_ROOT_PASSWORD: minioadmin
-        # Uses the HTTP health endpoint — no mc client required
-        options: >-
-          --health-cmd "curl -f http://localhost:9000/minio/health/live"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 10
-          --entrypoint sh
-          -e "minio server /data"
-
     env:
       NODE_ENV: test
       DATABASE_URL: postgresql://postgres:password@localhost:5432/syncnexus
@@ -102,6 +86,13 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
+
+      - name: Start MinIO container
+        run: |
+          docker run -d --name minio -p 9000:9000 \
+            -e MINIO_ROOT_USER=minioadmin \
+            -e MINIO_ROOT_PASSWORD=minioadmin \
+            minio/minio:RELEASE.2024-06-13T22-53-53Z server /data
 
       - name: Install dependencies
         run: npm ci
