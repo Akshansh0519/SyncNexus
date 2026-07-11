@@ -51,10 +51,14 @@ async function ensureBucket(bucket) {
       err.name === 'NoSuchBucket' ||
       (err.message && err.message.toLowerCase().includes('does not exist'))
     ) {
+      if (isCloudEndpoint) {
+        // On cloud providers like Filebase, R2, and Supabase, buckets are created in their dashboard.
+        // API creation (`CreateBucket`) or `HeadBucket` may return 404/NoSuchBucket for IPFS networks or restricted API keys.
+        return
+      }
       try {
         await s3.send(new CreateBucketCommand({ Bucket: bucket }))
       } catch (createErr) {
-        // If create fails because bucket already exists or cloud provider restricts API bucket creation, ignore safely
         if (
           createErr.name !== 'BucketAlreadyExists' &&
           createErr.name !== 'BucketAlreadyOwnedByYou' &&
@@ -64,6 +68,7 @@ async function ensureBucket(bucket) {
         }
       }
     } else {
+      if (isCloudEndpoint) return
       throw err
     }
   }
