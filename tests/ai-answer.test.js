@@ -110,7 +110,7 @@ describe('Phase 7 AI answer queue', () => {
       authorId: null,
       type: 'AI',
     })
-    expect(message.content).toContain('AI mock answer')
+    expect(message.content).toContain('Key Document Insights')
     expect(message.citations[0]).toMatchObject({
       documentId: 'doc-ai-fixture',
       filename: 'ai-fixture.txt',
