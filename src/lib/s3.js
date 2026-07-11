@@ -42,6 +42,16 @@ const s3 = new S3Client({
   },
 })
 
+const s3Alternate = new S3Client({
+  endpoint: endpointUrl,
+  forcePathStyle: !forcePathStyle,
+  region: (process.env.MINIO_REGION || 'us-east-1').trim(),
+  credentials: {
+    accessKeyId: (process.env.MINIO_ACCESS_KEY || '').trim(),
+    secretAccessKey: (process.env.MINIO_SECRET_KEY || '').trim(),
+  },
+})
+
 const s3Public = new S3Client({
   endpoint: normalizeEndpoint(process.env.MINIO_PUBLIC_ENDPOINT || endpointUrl),
   forcePathStyle,
@@ -51,6 +61,27 @@ const s3Public = new S3Client({
     secretAccessKey: (process.env.MINIO_SECRET_KEY || '').trim(),
   },
 })
+
+async function sendWithFallback(command) {
+  try {
+    return await s3.send(command)
+  } catch (err) {
+    if (
+      err.name === 'NoSuchBucket' ||
+      err.name === 'NotFound' ||
+      err.$metadata?.httpStatusCode === 404 ||
+      err.name === 'NetworkingError' ||
+      err.code === 'ENOTFOUND'
+    ) {
+      try {
+        return await s3Alternate.send(command)
+      } catch (altErr) {
+        throw err
+      }
+    }
+    throw err
+  }
+}
 
 function logS3Diagnostics(err, operation, bucket) {
   const logger = require('./logger')
@@ -77,7 +108,7 @@ function logS3Diagnostics(err, operation, bucket) {
 
 async function ensureBucket(bucket) {
   try {
-    await s3.send(new HeadBucketCommand({ Bucket: bucket }))
+    await sendWithFallback(new HeadBucketCommand({ Bucket: bucket }))
   } catch (err) {
     const statusCode = err.$metadata?.httpStatusCode
     if (
@@ -88,7 +119,7 @@ async function ensureBucket(bucket) {
       (err.message && err.message.toLowerCase().includes('does not exist'))
     ) {
       try {
-        await s3.send(new CreateBucketCommand({ Bucket: bucket }))
+        await sendWithFallback(new CreateBucketCommand({ Bucket: bucket }))
       } catch (createErr) {
         if (
           createErr.name !== 'BucketAlreadyExists' &&
@@ -130,7 +161,7 @@ async function generateDownloadUrl(bucket, key) {
 
 async function getObjectBuffer(bucket, key) {
   try {
-    const response = await s3.send(new GetObjectCommand({
+    const response = await sendWithFallback(new GetObjectCommand({
       Bucket: bucket,
       Key: key,
     }))
@@ -154,7 +185,7 @@ async function getObjectBuffer(bucket, key) {
 
 async function putObject(bucket, key, buffer, contentType) {
   try {
-    await s3.send(new PutObjectCommand({
+    await sendWithFallback(new PutObjectCommand({
       Bucket: bucket,
       Key: key,
       Body: buffer,
@@ -169,8 +200,8 @@ async function putObject(bucket, key, buffer, contentType) {
       err.$metadata?.httpStatusCode === 404
     ) {
       try {
-        await s3.send(new CreateBucketCommand({ Bucket: bucket })).catch(() => {})
-        await s3.send(new PutObjectCommand({
+        await sendWithFallback(new CreateBucketCommand({ Bucket: bucket })).catch(() => {})
+        await sendWithFallback(new PutObjectCommand({
           Bucket: bucket,
           Key: key,
           Body: buffer,
