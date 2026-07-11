@@ -73,7 +73,9 @@ export default function DocumentsTab({ roomId }) {
       const document = await confirmUploadRequest(roomId, upload, file)
       setDocuments((current) => [document, ...current])
     } catch (err) {
-      setError(err.response?.data?.message || err.response?.data?.error || 'File sharing is not available yet')
+      const serverMsg = err.response?.data?.message || err.response?.data?.error
+      const networkMsg = !err.response ? `Network error — cannot reach server (${err.message})` : null
+      setError(serverMsg || networkMsg || `Upload failed (status ${err.response?.status}): ${err.message}`)
     } finally {
       setProgress(null)
       if (inputRef.current) inputRef.current.value = ''
