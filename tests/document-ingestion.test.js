@@ -8,7 +8,7 @@ const { PutObjectCommand } = require('@aws-sdk/client-s3')
 const prisma = require('../src/lib/prisma')
 const { redis } = require('../src/lib/redis')
 const { s3, ensureBucket } = require('../src/lib/s3')
-const { client } = require('../src/lib/chroma')
+const { client, resetCollectionCache } = require('../src/lib/chroma')
 const { documentQueue, documentQueueConnection, documentQueueEvents } = require('../src/queues/documentQueue')
 const { ingestDocumentWorker, workerConnection } = require('../src/queues/workers/ingestDocument.worker')
 const { retrieveChunks } = require('../src/services/rag.service')
@@ -28,6 +28,7 @@ beforeAll(async () => {
   } catch {
     // Collection may not exist yet.
   }
+  resetCollectionCache()
 })
 
 afterAll(async () => {

@@ -4,7 +4,7 @@ const crypto = require('crypto')
 const mammoth = require('mammoth')
 const pdfParse = require('pdf-parse')
 const { geminiClient } = require('../lib/gemini')
-const { getCollection } = require('../lib/chroma')
+const { getCollection, resetCollectionCache } = require('../lib/chroma')
 const logger = require('../lib/logger')
 
 const EMBEDDING_DIMENSIONS = 3072
@@ -17,103 +17,102 @@ function splitLongText(text, size) {
   return chunks
 }
 
-function chunkText(text, { size = 800, overlap = 100 } = {}) {
-  const normalized = text.replace(/\r\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim()
-  if (!normalized) return []
+function chunkText(text, options = {}) {
+  const size = options.size || 500
+  const overlap = options.overlap || 50
+  const rawChunks = []
 
-  const units = normalized.split(/\n\n+|(?<=[.!?])\s+/).flatMap((unit) => (
-    unit.length > size ? splitLongText(unit, size) : unit
-  ))
+  const paragraphs = text.split(/\n\s*\n/)
+  let currentChunk = ''
 
-  const chunks = []
-  let current = ''
+  for (const paragraph of paragraphs) {
+    const trimmed = paragraph.trim()
+    if (!trimmed) continue
 
-  for (const unit of units) {
-    const next = current ? `${current} ${unit}` : unit
-    if (next.length <= size) {
-      current = next
-      continue
+    if (currentChunk.length + trimmed.length + 2 <= size) {
+      currentChunk += (currentChunk ? '\n\n' : '') + trimmed
+    } else {
+      if (currentChunk) rawChunks.push(currentChunk)
+      if (trimmed.length > size) {
+        rawChunks.push(...splitLongText(trimmed, size))
+        currentChunk = ''
+      } else {
+        currentChunk = trimmed
+      }
     }
-
-    if (current) chunks.push(current.trim())
-    const tail = current.slice(Math.max(0, current.length - overlap))
-    current = tail ? `${tail} ${unit}` : unit
   }
+  if (currentChunk) rawChunks.push(currentChunk)
 
-  if (current.trim()) chunks.push(current.trim())
-  return chunks
+  if (rawChunks.length <= 1 || overlap <= 0) return rawChunks
+
+  const overlapped = [rawChunks[0]]
+  for (let i = 1; i < rawChunks.length; i++) {
+    const prev = rawChunks[i - 1]
+    const tail = prev.slice(-overlap)
+    overlapped.push(tail + ' ' + rawChunks[i])
+  }
+  return overlapped
 }
 
 async function extractText(buffer, mimeType) {
   if (mimeType === 'application/pdf') {
-    const parsed = await pdfParse(buffer)
-    return parsed.text
+    const data = await pdfParse(buffer)
+    return data.text
   }
-
-  if (mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+  if (
+    mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+    mimeType === 'application/msword'
+  ) {
     const result = await mammoth.extractRawText({ buffer })
     return result.value
   }
-
-  if (mimeType === 'text/plain') {
-    return buffer.toString('utf8')
-  }
-
-  return ''
+  return buffer.toString('utf8')
 }
 
-function mockEmbed(text) {
-  const vector = new Array(EMBEDDING_DIMENSIONS).fill(0)
+function generateDummyEmbedding(text) {
   const hash = crypto.createHash('sha256').update(text).digest()
-
+  const values = new Array(EMBEDDING_DIMENSIONS)
   for (let i = 0; i < EMBEDDING_DIMENSIONS; i++) {
-    vector[i] = (hash[i % hash.length] / 255) * 2 - 1
+    const byte = hash[i % hash.length]
+    values[i] = (byte / 255) * 2 - 1
   }
-
-  const magnitude = Math.sqrt(vector.reduce((sum, value) => sum + value * value, 0)) || 1
-  return vector.map((value) => value / magnitude)
+  return values
 }
 
 async function batchEmbed(texts, onProgress) {
   if (!texts.length) return []
 
   if (!geminiClient) {
-    if (onProgress) onProgress(100)
-    return texts.map(mockEmbed)
+    logger.debug('Using deterministic fallback embeddings (no GEMINI_API_KEY)')
+    return texts.map((t) => generateDummyEmbedding(t))
   }
 
+  const model = geminiClient.getGenerativeModel({ model: 'text-embedding-004' })
+  const BATCH_SIZE = 100
   const responses = []
-  const BATCH_SIZE = 10
 
   for (let i = 0; i < texts.length; i += BATCH_SIZE) {
     const batch = texts.slice(i, i + BATCH_SIZE)
-    try {
-      const batchResponses = await Promise.all(
-        batch.map((text) =>
-          geminiClient.models.embedContent({
-            model: 'gemini-embedding-001',
-            contents: text,
-          })
-        )
-      )
-      responses.push(...batchResponses)
-    } catch (error) {
-      logger.warn({ err: error }, `Gemini embedding failed, falling back to mock embeddings: ${error.message || error}`)
-      responses.push(...batch.map((text) => ({ embeddings: [{ values: mockEmbed(text) }] })))
-    }
+    const requests = batch.map((text) => ({
+      content: { parts: [{ text }] },
+    }))
+
+    const result = await model.batchEmbedContents({
+      requests,
+    })
+    responses.push(...result.embeddings)
 
     if (onProgress) {
-      const percent = Math.min(100, Math.round(((i + BATCH_SIZE) / texts.length) * 100))
+      const percent = Math.min(100, Math.round(((i + batch.length) / texts.length) * 100))
       onProgress(percent)
     }
 
-    // Wait 1 second between batches to stay well under the 1500 RPM limit
     if (i + BATCH_SIZE < texts.length) {
       await new Promise((resolve) => setTimeout(resolve, 1000))
     }
   }
 
-  return responses.map((response) => response.embeddings[0].values)
+  return responses.map((r) => r.values)
 }
 
 async function embed(text) {
@@ -124,7 +123,6 @@ async function embed(text) {
 async function ingestChunks(roomId, documentId, chunks, embeddings, extraMetadata = {}) {
   if (!chunks.length) return 0
 
-  const collection = await getCollection()
   const ids = chunks.map((_, index) => `${documentId}:${index}`)
   const metadatas = chunks.map((_, index) => ({
     roomId,
@@ -133,26 +131,48 @@ async function ingestChunks(roomId, documentId, chunks, embeddings, extraMetadat
     ...extraMetadata,
   }))
 
-  await collection.upsert({
-    ids,
-    embeddings,
-    documents: chunks,
-    metadatas,
-  })
-
-  return chunks.length
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const collection = await getCollection()
+      await collection.upsert({
+        ids,
+        embeddings,
+        documents: chunks,
+        metadatas,
+      })
+      return chunks.length
+    } catch (err) {
+      if (attempt === 1) {
+        logger.warn({ err: err.message }, 'Collection upsert failed, clearing collection cache and retrying once...')
+        resetCollectionCache()
+        continue
+      }
+      throw err
+    }
+  }
 }
 
 async function retrieveChunks(roomId, question, nResults = 5) {
-  const collection = await getCollection()
   const questionEmbedding = await embed(question)
 
-  return collection.query({
-    queryEmbeddings: [questionEmbedding],
-    nResults,
-    where: { roomId },
-    include: ['documents', 'metadatas', 'distances'],
-  })
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const collection = await getCollection()
+      return await collection.query({
+        queryEmbeddings: [questionEmbedding],
+        nResults,
+        where: { roomId },
+        include: ['documents', 'metadatas', 'distances'],
+      })
+    } catch (err) {
+      if (attempt === 1) {
+        logger.warn({ err: err.message }, 'Collection query failed, clearing collection cache and retrying once...')
+        resetCollectionCache()
+        continue
+      }
+      throw err
+    }
+  }
 }
 
 module.exports = {

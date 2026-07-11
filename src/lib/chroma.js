@@ -13,6 +13,10 @@ let _collection = null
 
 const logger = require('./logger')
 
+function resetCollectionCache() {
+  _collection = null
+}
+
 async function getCollection() {
   if (_collection) return _collection
 
@@ -26,14 +30,9 @@ async function getCollection() {
       return _collection
     } catch (err) {
       _collection = null
-      const isWakeupError = err.message?.includes('Unexpected token') ||
-                            err.message?.includes('<!DOCTYPE') ||
-                            err.message?.includes('Could not connect') ||
-                            err.message?.includes('ECONNREFUSED')
-
-      if (attempt < maxAttempts && isWakeupError) {
-        const delayMs = attempt * 2000
-        logger.warn({ attempt, maxAttempts, delayMs, err: err.message }, 'ChromaDB server waking up or unavailable (`<!DOCTYPE` HTML loading page). Waiting to retry...')
+      if (attempt < maxAttempts) {
+        const delayMs = attempt * 1500
+        logger.warn({ attempt, maxAttempts, delayMs, err: err.message }, 'ChromaDB server waking up or unavailable (`<!DOCTYPE` HTML loading page or network error). Waiting to retry getCollection...')
         await new Promise((resolve) => setTimeout(resolve, delayMs))
       } else {
         logger.error({ err: err.message, stack: err.stack }, 'Failed to connect to ChromaDB or get collection after retries')
@@ -43,4 +42,4 @@ async function getCollection() {
   }
 }
 
-module.exports = { client, getCollection }
+module.exports = { client, getCollection, resetCollectionCache }
