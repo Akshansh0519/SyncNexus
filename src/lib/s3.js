@@ -29,7 +29,7 @@ const isCloudEndpoint = endpointUrl.includes('filebase.com') ||
 
 const forcePathStyle = process.env.MINIO_FORCE_PATH_STYLE !== undefined
   ? process.env.MINIO_FORCE_PATH_STYLE === 'true'
-  : !isCloudEndpoint
+  : !endpointUrl.includes('amazonaws.com')
 
 const s3 = new S3Client({
   endpoint: endpointUrl,
