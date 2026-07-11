@@ -82,25 +82,31 @@ function generateDummyEmbedding(text) {
 async function batchEmbed(texts, onProgress) {
   if (!texts.length) return []
 
-  if (!geminiClient) {
+  if (!geminiClient || !geminiClient.models) {
     logger.debug('Using deterministic fallback embeddings (no GEMINI_API_KEY)')
     return texts.map((t) => generateDummyEmbedding(t))
   }
 
-  const model = geminiClient.getGenerativeModel({ model: 'text-embedding-004' })
-  const BATCH_SIZE = 100
   const responses = []
+  const BATCH_SIZE = 20
 
   for (let i = 0; i < texts.length; i += BATCH_SIZE) {
     const batch = texts.slice(i, i + BATCH_SIZE)
-    const requests = batch.map((text) => ({
-      content: { parts: [{ text }] },
-    }))
-
-    const result = await model.batchEmbedContents({
-      requests,
-    })
-    responses.push(...result.embeddings)
+    const batchResults = await Promise.all(
+      batch.map(async (text) => {
+        try {
+          const result = await geminiClient.models.embedContent({
+            model: 'text-embedding-004',
+            contents: text,
+          })
+          return result.embedding?.values || generateDummyEmbedding(text)
+        } catch (err) {
+          logger.warn({ err: err.message }, 'Gemini embedContent failed for chunk, falling back to dummy embedding')
+          return generateDummyEmbedding(text)
+        }
+      })
+    )
+    responses.push(...batchResults)
 
     if (onProgress) {
       const percent = Math.min(100, Math.round(((i + batch.length) / texts.length) * 100))
@@ -108,11 +114,11 @@ async function batchEmbed(texts, onProgress) {
     }
 
     if (i + BATCH_SIZE < texts.length) {
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      await new Promise((resolve) => setTimeout(resolve, 500))
     }
   }
 
-  return responses.map((r) => r.values)
+  return responses
 }
 
 async function embed(text) {

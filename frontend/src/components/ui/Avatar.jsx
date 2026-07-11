@@ -20,23 +20,37 @@ const avatarThemes = [
 ]
 
 function hash(value = '') {
-  let h = 0
+  let h = 2166136261
   for (let i = 0; i < value.length; i++) {
-    h = (h * 31 + value.charCodeAt(i)) % 1000000007
+    h ^= value.charCodeAt(i)
+    h += (h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24)
   }
-  return Math.abs(h)
+  return Math.abs(h >>> 0)
+}
+
+function getInitials(username = '?') {
+  const clean = String(username || '?').trim()
+  if (!clean || clean === '?') return '?'
+
+  const spaced = clean.replace(/([a-z])([A-Z0-9])/g, '$1 $2')
+  const parts = spaced.split(/\s+|_|-|\./).filter(Boolean)
+
+  if (parts.length >= 2) {
+    const first = parts[0][0]
+    const last = parts[parts.length - 1]
+    if (/^[0-9]+$/.test(last)) {
+      return (first + last).toUpperCase()
+    }
+    return (first + parts[1][0]).toUpperCase()
+  }
+
+  return clean.slice(0, 2).toUpperCase()
 }
 
 export default function Avatar({ userId = '', username = '?', size = 32 }) {
-  const initials = username
-    .split(/\s|_/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join('')
-    .toUpperCase() || '?'
-
-  const theme = avatarThemes[hash(userId || username) % avatarThemes.length]
+  const initials = getInitials(username)
+  const identifier = `${username || ''}:${userId || ''}`
+  const theme = avatarThemes[hash(identifier) % avatarThemes.length]
 
   return (
     <div

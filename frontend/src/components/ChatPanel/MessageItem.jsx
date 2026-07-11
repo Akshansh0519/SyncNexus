@@ -10,7 +10,12 @@ function formatTime(value) {
 
 export default function MessageItem({ message }) {
   const { user } = useAuth()
-  const isMine = Boolean(user && (user.id === message.authorId || (user.username && user.username === message.authorUsername)))
+  const isMine = Boolean(
+    user && (
+      user.id === message.authorId ||
+      (user.username && message.authorUsername && user.username.toLowerCase().trim() === message.authorUsername.toLowerCase().trim())
+    )
+  )
 
   if (message.type === 'SYSTEM') {
     return <div className={styles.systemMessage}>{message.content}</div>
