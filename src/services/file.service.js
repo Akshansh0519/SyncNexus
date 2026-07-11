@@ -98,11 +98,16 @@ async function uploadFileDirect(roomId, userId, buffer, { filename, mimeType, si
   const response = formatDocument(document)
 
   if (status === 'PENDING') {
-    await documentQueue.add('ingest-document', {
-      roomId,
-      documentId: document.id,
-      userId,
-    })
+    try {
+      await documentQueue.add('ingest-document', {
+        roomId,
+        documentId: document.id,
+        userId,
+      })
+    } catch (queueErr) {
+      const logger = require('../lib/logger')
+      logger.warn({ err: queueErr.message, documentId: document.id }, 'Failed to enqueue document for background ingestion')
+    }
   }
 
   emitter.to(roomId).emit('file:shared', { document: response })
@@ -137,13 +142,17 @@ async function confirmUpload(roomId, userId, { storageKey, filename, mimeType, s
 
   const response = formatDocument(document)
 
-  // Phase 6 will enqueue document ingestion here for PENDING documents.
   if (status === 'PENDING') {
-    await documentQueue.add('ingest-document', {
-      roomId,
-      documentId: document.id,
-      userId,
-    })
+    try {
+      await documentQueue.add('ingest-document', {
+        roomId,
+        documentId: document.id,
+        userId,
+      })
+    } catch (queueErr) {
+      const logger = require('../lib/logger')
+      logger.warn({ err: queueErr.message, documentId: document.id }, 'Failed to enqueue document for background ingestion')
+    }
   }
 
   emitter.to(roomId).emit('file:shared', { document: response })
@@ -169,11 +178,19 @@ async function getDownloadUrl(roomId, docId) {
     throw new AppError('Document not found', 404, 'DOCUMENT_NOT_FOUND')
   }
 
-  const downloadUrl = await generateDownloadUrl(getBucket(), document.storageKey)
+  try {
+    const downloadUrl = await generateDownloadUrl(getBucket(), document.storageKey)
 
-  return {
-    downloadUrl,
-    expiresIn: 3600,
+    return {
+      downloadUrl,
+      expiresIn: 3600,
+    }
+  } catch (err) {
+    throw new AppError(
+      `S3 Storage Error: ${err.message || 'Failed to generate download URL'}. Verify MINIO_BUCKET (${getBucket()}) and storage credentials.`,
+      502,
+      'S3_DOWNLOAD_ERROR'
+    )
   }
 }
 

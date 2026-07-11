@@ -9,11 +9,23 @@ const {
 } = require('@aws-sdk/client-s3')
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner')
 
-const endpointUrl = process.env.MINIO_ENDPOINT || 'http://localhost:9005'
+function normalizeEndpoint(url) {
+  if (!url) return 'http://localhost:9005'
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    return `https://${url}`
+  }
+  return url.replace(/\/+$/, '')
+}
+
+const endpointUrl = normalizeEndpoint(process.env.MINIO_ENDPOINT)
 const isCloudEndpoint = endpointUrl.includes('filebase.com') ||
   endpointUrl.includes('cloudflarestorage.com') ||
   endpointUrl.includes('amazonaws.com') ||
-  endpointUrl.includes('supabase.co')
+  endpointUrl.includes('supabase.co') ||
+  endpointUrl.includes('googleapis.com') ||
+  endpointUrl.includes('digitaloceanspaces.com') ||
+  endpointUrl.includes('backblazeb2.com') ||
+  endpointUrl.includes('wasabisys.com')
 
 const forcePathStyle = process.env.MINIO_FORCE_PATH_STYLE !== undefined
   ? process.env.MINIO_FORCE_PATH_STYLE === 'true'
@@ -30,7 +42,7 @@ const s3 = new S3Client({
 })
 
 const s3Public = new S3Client({
-  endpoint: process.env.MINIO_PUBLIC_ENDPOINT || endpointUrl,
+  endpoint: normalizeEndpoint(process.env.MINIO_PUBLIC_ENDPOINT || endpointUrl),
   forcePathStyle,
   region: process.env.MINIO_REGION || 'us-east-1',
   credentials: {
@@ -51,11 +63,6 @@ async function ensureBucket(bucket) {
       err.name === 'NoSuchBucket' ||
       (err.message && err.message.toLowerCase().includes('does not exist'))
     ) {
-      if (isCloudEndpoint) {
-        // On cloud providers like Filebase, R2, and Supabase, buckets are created in their dashboard.
-        // API creation (`CreateBucket`) or `HeadBucket` may return 404/NoSuchBucket for IPFS networks or restricted API keys.
-        return
-      }
       try {
         await s3.send(new CreateBucketCommand({ Bucket: bucket }))
       } catch (createErr) {
@@ -64,6 +71,7 @@ async function ensureBucket(bucket) {
           createErr.name !== 'BucketAlreadyOwnedByYou' &&
           !(createErr.message && createErr.message.toLowerCase().includes('already exists'))
         ) {
+          if (isCloudEndpoint) return
           throw createErr
         }
       }
@@ -95,27 +103,66 @@ async function generateDownloadUrl(bucket, key) {
 }
 
 async function getObjectBuffer(bucket, key) {
-  const response = await s3.send(new GetObjectCommand({
-    Bucket: bucket,
-    Key: key,
-  }))
+  try {
+    const response = await s3.send(new GetObjectCommand({
+      Bucket: bucket,
+      Key: key,
+    }))
 
-  const chunks = []
-  for await (const chunk of response.Body) {
-    chunks.push(Buffer.from(chunk))
+    const chunks = []
+    for await (const chunk of response.Body) {
+      chunks.push(Buffer.from(chunk))
+    }
+
+    return Buffer.concat(chunks)
+  } catch (err) {
+    const { AppError } = require('./errors')
+    throw new AppError(
+      `S3 Storage Error (${err.name || 'GetObject'}): ${err.message || 'Failed to read file from cloud storage'}.`,
+      502,
+      'S3_DOWNLOAD_ERROR'
+    )
   }
-
-  return Buffer.concat(chunks)
 }
 
 async function putObject(bucket, key, buffer, contentType) {
-  await s3.send(new PutObjectCommand({
-    Bucket: bucket,
-    Key: key,
-    Body: buffer,
-    ContentType: contentType,
-    ContentLength: buffer.length,
-  }))
+  try {
+    await s3.send(new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: buffer,
+      ContentType: contentType,
+      ContentLength: buffer.length,
+    }))
+  } catch (err) {
+    if (
+      err.name === 'NotFound' ||
+      err.name === 'NoSuchBucket' ||
+      (err.message && err.message.toLowerCase().includes('does not exist')) ||
+      err.$metadata?.httpStatusCode === 404
+    ) {
+      try {
+        await s3.send(new CreateBucketCommand({ Bucket: bucket })).catch(() => {})
+        await s3.send(new PutObjectCommand({
+          Bucket: bucket,
+          Key: key,
+          Body: buffer,
+          ContentType: contentType,
+          ContentLength: buffer.length,
+        }))
+        return
+      } catch (retryErr) {
+        err = retryErr
+      }
+    }
+
+    const { AppError } = require('./errors')
+    throw new AppError(
+      `S3 Storage Error (${err.name || 'PutObject'}): ${err.message || 'Failed to upload file to cloud storage'}. Verify MINIO_BUCKET (${bucket}) and storage credentials.`,
+      502,
+      'S3_UPLOAD_ERROR'
+    )
+  }
 }
 
 module.exports = {
