@@ -47,6 +47,12 @@ export default function RegisterPage() {
               <span>Initialize Workspace</span>
               <ArrowRight size={18} />
             </button>
+            <div className={styles.spinupNotice}>
+              <span className={styles.spinupAsterisk}>*</span>
+              <div>
+                <strong>Free Tier Notice:</strong> Hosted on Render Free Tier. Account initialization may take <strong>~50–60 seconds</strong> while the backend container wakes up from sleep. Thank you!
+              </div>
+            </div>
           </div>
           <p className={styles.footer}>Already initialized? <Link to="/login">Sign In</Link></p>
         </form>

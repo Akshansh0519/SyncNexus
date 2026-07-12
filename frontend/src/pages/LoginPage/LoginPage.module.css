@@ -411,6 +411,71 @@
   100% { transform: translateY(0px); opacity: 1; }
 }
 
+/* ── Graceful Render Free Tier Spin-Up Notices ──────── */
+.spinupNotice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.28);
+  border-radius: 8px;
+  padding: 11px 13px;
+  margin-top: 4px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: #fcd34d;
+}
+.spinupAsterisk {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 800;
+  color: #f59e0b;
+  line-height: 1;
+}
+.spinupNotice strong {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.brandSpinupBanner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(0, 240, 255, 0.06);
+  border: 1px solid rgba(0, 240, 255, 0.22);
+  border-radius: 10px;
+  padding: 13px 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(8px);
+}
+.bannerIcon {
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: rgba(0, 240, 255, 0.12);
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+.bannerText {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 13px;
+  color: #e2e8f0;
+}
+.bannerText strong {
+  color: #00f0ff;
+  font-weight: 600;
+}
+.bannerText small {
+  font-size: 11.5px;
+  color: #94a3b8;
+  line-height: 1.4;
+}
+
 @media (max-width: 960px) {
   .page {
     grid-template-columns: 1fr;

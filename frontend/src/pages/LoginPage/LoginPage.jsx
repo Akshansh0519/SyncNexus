@@ -46,6 +46,12 @@ export default function LoginPage() {
               <span>Sign In to Workspace</span>
               <ArrowRight size={18} />
             </button>
+            <div className={styles.spinupNotice}>
+              <span className={styles.spinupAsterisk}>*</span>
+              <div>
+                <strong>Free Tier Notice:</strong> Hosted on Render Free Tier. Initial sign-in may take <strong>~50–60 seconds</strong> if the server is waking up from sleep. Thank you for your patience!
+              </div>
+            </div>
           </div>
           <p className={styles.footer}>Don't have an account? <Link to="/register">Create Account</Link></p>
         </form>
@@ -118,6 +124,15 @@ export function BrandPanel() {
             <span className={styles.techPill}>LangGraph</span>
             <span className={styles.techPill}>PyTorch</span>
             <span className={styles.techPill}>Distributed</span>
+          </div>
+        </div>
+
+        {/* Live Demo Spin-Up Banner */}
+        <div className={styles.brandSpinupBanner}>
+          <div className={styles.bannerIcon}>⚡</div>
+          <div className={styles.bannerText}>
+            <span><strong>* Live Demo Notice:</strong> Hosted on Render Free Tier.</span>
+            <small>If inactive for 15+ mins, initial connection takes <strong>~50 seconds</strong> while containers wake up. Subsequent interactions are instant (&lt;20ms).</small>
           </div>
         </div>
       </div>
